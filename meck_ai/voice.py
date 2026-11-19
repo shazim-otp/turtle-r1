@@ -4,6 +4,7 @@ import tempfile
 import threading
 from pathlib import Path
 
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 import edge_tts
 import numpy as np
 import sounddevice as sd
@@ -34,10 +35,23 @@ def record_and_transcribe(seconds=5):
     finally:
         Path(wav_path).unlink(missing_ok=True)
 
-async def _speak_async(text, output_path):
+async def _speak_async(text, output_path, should_stop=None):
     voice = os.getenv("TTS_VOICE", "en-GB-RyanNeural")
     communicate = edge_tts.Communicate(text, voice)
-    await communicate.save(output_path)
+    stream = communicate.stream()
+    try:
+        with open(output_path, "wb") as f:
+            async for chunk in stream:
+                if _stop_speech_event.is_set() or (should_stop and should_stop()):
+                    return False
+                if chunk["type"] == "audio":
+                    f.write(chunk["data"])
+        return True
+    finally:
+        try:
+            await stream.aclose()
+        except Exception:
+            pass
 
 def stop_speech():
     """Immediately stop speech generation and audio playback."""
@@ -61,9 +75,11 @@ def speak(text, should_stop=None):
         if _stop_speech_event.is_set() or (should_stop and should_stop()):
             return
 
-        asyncio.run(_speak_async(text[:1500], path))
+        success = asyncio.run(_speak_async(text[:1500], path, should_stop))
+        if not success or _stop_speech_event.is_set() or (should_stop and should_stop()):
+            return
 
-        if _stop_speech_event.is_set() or (should_stop and should_stop()):
+        if not os.path.exists(path) or os.path.getsize(path) == 0:
             return
 
         if not pygame.mixer.get_init():
@@ -76,10 +92,13 @@ def speak(text, should_stop=None):
             if _stop_speech_event.is_set() or (should_stop and should_stop()):
                 pygame.mixer.music.stop()
                 break
-            pygame.time.wait(50)
+            pygame.time.wait(30)
+    except Exception:
+        pass
     finally:
         try:
-            pygame.mixer.music.unload()
+            if pygame.mixer.get_init():
+                pygame.mixer.music.unload()
         except Exception:
             pass
         Path(path).unlink(missing_ok=True)

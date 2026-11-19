@@ -1,4 +1,7 @@
+import os
 import sys
+
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 from PySide6.QtWidgets import QApplication
 from meck_ai.ui import MainWindow
 

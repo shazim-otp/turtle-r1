@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TURTLE — Desktop Agent</title>
+<style>
+/* ==========================================================================
+   TURTLE — MINIMAL, REFINED DESKTOP WORKSPACE
+   Designed with human restraint, precision typography, and natural materials.
+   No sci-fi gimmicks, no fake radars, no neon clutter.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+  --bg: #f8fafc;
+  --sidebar-bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface-hover: #f8fafc;
+  --surface-active: #f1f5f9;
+  --border: #e2e8f0;
+  --border-focus: #ef4444;
+  --border-red: rgba(239, 68, 68, 0.45);
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent: #ef4444;
+  --accent-soft: rgba(239, 68, 68, 0.08);
+  --accent-hover: #dc2626;
+  --user-bg: #0f172a;
+  --user-text: #ffffff;
+  --agent-bg: #ffffff;
+  --code-bg: #0f172a;
+  --code-text: #e2e8f0;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-popover: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+body.dark {
+  color-scheme: dark;
+  --bg: #090a0f;
+  --sidebar-bg: #0e1117;
+  --surface: #141820;
+  --surface-hover: #1a202c;
+  --surface-active: #222938;
+  --border: #1e2430;
+  --border-focus: #ef4444;
+  --border-red: rgba(239, 68, 68, 0.35);
+  --text: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #ef4444;
+  --accent-soft: rgba(239, 68, 68, 0.12);
+  --accent-hover: #f87171;
+  --user-bg: #1e2533;
+  --user-text: #f8fafc;
+  --agent-bg: #141820;
+  --code-bg: #0b0d13;
+  --code-text: #cbd5e1;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-popover: 0 20px 30px rgba(0, 0, 0, 0.6);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input {
+  font: inherit;
+  color: inherit;
+}
+
+/* ==========================================================================
+   APP SHELL
+   ========================================================================== */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* TOP HEADER */
+.header {
+  height: 52px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-red);
+  z-index: 50;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-img {
+  height: 24px;
+  width: auto;
+  object-fit: contain;
+}
+
+.dark-only { display: none !important; }
+.light-only { display: inline-block !important; }
+body.dark .dark-only { display: inline-block !important; }
+body.dark .light-only { display: none !important; }
+
+.header-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--sidebar-bg);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* System Metrics Bar */
+.metrics-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.metric-pill strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.metric-pill.mode strong {
+  color: #10b981;
+}
+
+/* Settings Menu */
+.menu-wrap {
+  position: relative;
+}
+
+.header-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+
+.header-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-red);
+  color: var(--text);
+}
+
+.header-btn svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.menu-popover {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  width: 230px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-red);
+  border-radius: 12px;
+  box-shadow: var(--shadow-popover);
+  display: none;
+  z-index: 100;
+}
+
+.menu-popover.open {
+  display: block;
+}
+
+.menu-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  padding: 6px 8px 4px;
+}
+
+.menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.menu-item:hover {
+  background: var(--sidebar-bg);
+}
+
+.menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+}
+
+.toggle-switch {
+  width: 30px;
+  height: 16px;
+  border-radius: 10px;
+  background: var(--border);
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.toggle-switch::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 2px;
+  top: 2px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.toggle-switch.on {
+  background: var(--accent);
+}
+
+.toggle-switch.on::after {
+  transform: translateX(14px);
+}
+
+/* ==========================================================================
+   WORKSPACE: 2-COLUMN SPLIT
+   Left: Fixed Sidebar (Tools, Status, Device Info)
+   Right: Chat Stream + Command Input (Independently scrollable)
+   ========================================================================== */
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  background: var(--bg);
+}
+
+/* SIDEBAR (FIXED) */
+.sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border-red);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+  gap: 18px;
+}
+
+/* Status Card */
+.agent-status-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.avatar-container {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  flex: none;
+  position: relative;
+}
+
+.avatar-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.status-badge-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid var(--surface);
+}
+
+.agent-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.agent-status-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.agent-status-text.active {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Sidebar Section */
+.nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  padding: 0 4px 6px;
+}
+
+.action-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.action-item:hover {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.action-item:active {
+  background: var(--surface-active);
+}
+
+.action-item.active {
+  background: var(--accent-soft);
+  border-color: var(--border-red);
+  color: var(--accent);
+}
+
+.action-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.action-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.action-icon {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  flex: none;
+}
+
+.action-item:hover .action-icon {
+  color: var(--text);
+}
+
+.action-item.active .action-icon {
+  color: var(--accent);
+}
+
+.action-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.action-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shortcut-tag {
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  flex: none;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 4px;
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   MAIN RIGHT PANE (CHAT & COMMAND DECK)
+   ========================================================================== */
+.main-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+  position: relative;
+}
+
+/* Top bar in main pane */
+.pane-topbar {
+  height: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.pane-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-clear {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-clear:hover {
+  background: var(--sidebar-bg);
+  color: var(--text);
+}
+
+/* MCUE TASK MONITOR (When Autonomous Operation is running) */
+.task-monitor {
+  margin: 14px 20px 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-red);
+  border-radius: 10px;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+.task-monitor.active {
+  display: flex;
+}
+
+.monitor-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.monitor-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-status {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--border-red);
+}
+
+.badge-status.running {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.badge-status.paused {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.pill-env {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--sidebar-bg);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.monitor-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-small {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn-small:hover {
+  background: var(--sidebar-bg);
+}
+
+.btn-small.danger {
+  color: var(--accent);
+  border-color: var(--border-red);
+}
+
+.btn-small.danger:hover {
+  background: var(--accent-soft);
+}
+
+.monitor-goal {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.monitor-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--sidebar-bg);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+.plan-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.plan-step.active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.plan-step.completed {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.plan-icon {
+  font-size: 10px;
+  width: 14px;
+  text-align: center;
+}
+
+.monitor-ticker {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  background: var(--sidebar-bg);
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Approval Card in MCUE Monitor */
+.approval-card {
+  display: none;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  padding: 10px 12px;
+  border-radius: 8px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.approval-card.active {
+  display: flex;
+}
+
+.approval-head {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.approval-content {
+  font-size: 11px;
+  color: var(--text);
+  white-space: pre-wrap;
+  background: var(--surface);
+  padding: 6px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.approval-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-approve {
+  padding: 4px 12px;
+  border-radius: 5px;
+  border: none;
+  background: #10b981;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-deny {
+  padding: 4px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   SCROLLABLE CHAT (ONLY THIS COMPONENT SCROLLS)
+   ========================================================================== */
+.chat {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  user-select: text;
+  scroll-behavior: smooth;
+}
+
+.chat::-webkit-scrollbar,
+.sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.chat::-webkit-scrollbar-track,
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat::-webkit-scrollbar-thumb,
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.chat::-webkit-scrollbar-thumb:hover {
+  background: var(--border-red);
+}
+
+/* Chat Welcome Banner */
+.chat-welcome {
+  margin: auto;
+  max-width: 440px;
+  text-align: center;
+  padding: 24px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.welcome-logo {
+  height: 42px;
+  width: auto;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+
+.chat-welcome h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.chat-welcome p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.prompt-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.prompt-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.prompt-btn:hover {
+  background: var(--sidebar-bg);
+  border-color: var(--border-red);
+  color: var(--text);
+}
+
+/* Message Styles */
+.message {
+  max-width: min(85%, 680px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.message.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.message.agent {
+  align-self: flex-start;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.message-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+
+.bubble {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.message.user .bubble {
+  background: var(--user-bg);
+  color: var(--user-text);
+  border-bottom-right-radius: 3px;
+}
+
+.message.agent .bubble {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 3px;
+  box-shadow: var(--shadow-sm);
+}
+
+.bubble pre {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 10px 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  margin: 6px 0;
+}
+
+.bubble code {
+  background: var(--sidebar-bg);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+.bubble strong {
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   COMMAND INPUT BAR (Anchored at Bottom)
+   ========================================================================== */
+.command-container {
+  padding: 12px 20px 16px;
+  background: var(--bg);
+}
+
+.commandbar {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border-red);
+  border-radius: 10px;
+  padding: 4px 6px 4px 14px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.commandbar:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.commandbar input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  user-select: text;
+}
+
+.commandbar input::placeholder {
+  color: var(--text-muted);
+}
+
+.btn-execute {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+.btn-execute:hover {
+  background: var(--accent-hover);
+}
+
+.btn-execute.queued-mode {
+  background: #f59e0b;
+}
+
+.key-hint {
+  font-size: 11px;
+  opacity: 0.8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ==========================================================================
+   MODAL DIALOG
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: none;
+  place-items: center;
+}
+
+.modal-overlay.active {
+  display: grid;
+}
+
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border-red);
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: var(--shadow-popover);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.modal-body {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.modal-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-btn.cancel {
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.modal-btn.stop {
+  background: var(--accent);
+  border: none;
+  color: #ffffff;
+}
+
+.modal-btn.stop:hover {
+  background: var(--accent-hover);
+}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <!-- TOPBAR -->
+  <header class="header">
+    <div class="header-left">
+      <img src="assets/turtle_logo_text_light.png" class="logo-img light-only" alt="TURTLE">
+      <img src="assets/turtle_logo_text_dark.png" class="logo-img dark-only" alt="TURTLE">
+      <span class="header-badge">Autonomous Desktop</span>
+    </div>
+
+    <div class="header-right">
+      <div class="metrics-bar">
+        <span class="metric-pill">CPU <strong id="cpu">--%</strong></span>
+        <span class="metric-pill">RAM <strong id="ram">--%</strong></span>
+        <span class="metric-pill">BAT <strong id="bat">--%</strong></span>
+        <span class="metric-pill mode">MODE <strong id="mode">AUTONOMOUS</strong></span>
+      </div>
+
+      <div class="menu-wrap">
+        <button class="header-btn" id="menuButton" aria-label="Settings" aria-expanded="false">
+          <svg viewBox="0 0 24 24">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="18" x2="20" y2="18"></line>
+          </svg>
+        </button>
+
+        <div class="menu-popover" id="menuPopover">
+          <div class="menu-section-label">Preferences</div>
+          <button class="menu-item" id="themeOption">
+            <span>Dark theme</span>
+            <span class="toggle-switch" id="themeSwitch"></span>
+          </button>
+          <button class="menu-item" id="systemThemeOption">
+            <span>Sync with system</span>
+            <span class="toggle-switch on" id="systemThemeSwitch"></span>
+          </button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" id="autonomyOption">
+            <span>Autonomous mode</span>
+            <span class="toggle-switch on" id="autonomySwitch"></span>
+          </button>
+          <button class="menu-item" id="ttsOption">
+            <span>Voice output</span>
+            <span class="toggle-switch on" id="ttsSwitch"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2-COLUMN WORKSPACE -->
+  <main class="workspace">
+    <!-- LEFT SIDEBAR (FIXED) -->
+    <aside class="sidebar">
+      <!-- Status Card -->
+      <div class="agent-status-card" id="radarGraphic">
+        <div class="avatar-container">
+          <img src="assets/turtle_icon_light.png" class="avatar-img light-only" alt="Turtle">
+          <img src="assets/turtle_icon_dark.png" class="avatar-img dark-only" alt="Turtle">
+          <span class="status-badge-dot"></span>
+        </div>
+        <div class="agent-meta">
+          <div class="agent-name">TURTLE</div>
+          <div class="agent-status-text" id="gestureStatus">Ready for commands</div>
+        </div>
+      </div>
+
+      <!-- Action Tools -->
+      <div class="nav-section">
+        <div class="section-label">Tools & Actions</div>
+
+        <button class="action-item" id="btnComputerUse" data-action="Autonomous Computer Use">
+          <div class="action-item-left">
+            <span class="action-icon">
+              <svg viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            </span>
+            <span class="action-title">Computer Use (MCUE)</span>
+          </div>
+          <span class="shortcut-tag">⌘M</span>
+        </button>
+
+        <button class="action-item" id="btnGesture" data-action="Gesture Control">
+          <div class="action-item-left">
+            <span class="action-icon">
+              <svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path></svg>
+            </span>
+            <span class="action-title">Gesture Mouse</span>
+          </div>
+          <span class="shortcut-tag">⌘G</span>
+        </button>
+
+        <button class="action-item" id="btnVoice" data-action="Voice Command (5s)">
+          <div class="action-item-left">
+            <span class="action-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+            </span>
+            <span class="action-title">Voice Dictation</span>
+          </div>
+          <span class="shortcut-tag">⌘V</span>
+        </button>
+
+        <button class="action-item" id="btnVision" data-action="Screen Vision">
+          <div class="action-item-left">
+            <span class="action-icon">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path></svg>
+            </span>
+            <span class="action-title">Screen Vision</span>
+          </div>
+          <span class="shortcut-tag">⌘S</span>
+        </button>
+
+        <button class="action-item" id="silence" disabled>
+          <div class="action-item-left">
+            <span class="action-icon">
+              <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+            </span>
+            <span class="action-title">Silence Speech</span>
+          </div>
+        </button>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div>TURTLE Desktop v2.4</div>
+        <div>Computer Use Engine Active</div>
+      </div>
+    </aside>
+
+    <!-- RIGHT MAIN PANE -->
+    <section class="main-pane">
+      <div class="pane-topbar">
+        <div class="pane-title">
+          <span>Conversation & Tasks</span>
+        </div>
+        <button class="btn-clear" id="clearChat">Clear</button>
+      </div>
+
+      <!-- LIVE TASK MONITOR (MCUE) -->
+      <div class="task-monitor" id="taskMonitor">
+        <div class="monitor-top">
+          <div class="monitor-badges">
+            <span class="badge-status" id="monitorStatusBadge">RUNNING</span>
+            <span class="pill-env" id="monitorAppPill">Desktop</span>
+            <span class="pill-env" id="monitorTabPill" style="display:none"></span>
+          </div>
+          <div class="monitor-actions">
+            <button class="btn-small" id="btnTaskPause">Pause</button>
+            <button class="btn-small" id="btnTaskResume" style="display:none">Resume</button>
+            <button class="btn-small danger" id="btnTaskStop">Stop Task</button>
+          </div>
+        </div>
+
+        <div class="monitor-goal" id="monitorGoalText">Autonomous operation in progress…</div>
+        <div class="monitor-plan" id="monitorPlanList"></div>
+        <div class="monitor-ticker" id="monitorActionTicker">Observing screen…</div>
+
+        <!-- Approval Request -->
+        <div class="approval-card" id="approvalCard">
+          <div class="approval-head" id="approvalTitle">Authorization Required</div>
+          <div class="approval-content" id="approvalBody">Proposed changes require your authorization.</div>
+          <div class="approval-actions">
+            <button class="btn-deny" id="btnDenyAction">Deny</button>
+            <button class="btn-approve" id="btnApproveAction">Approve</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCROLLABLE CHAT -->
+      <div class="chat" id="chat" aria-live="polite">
+        <div class="chat-welcome" id="welcome">
+          <img src="assets/turtle_logo_text_light.png" class="welcome-logo light-only" alt="TURTLE">
+          <img src="assets/turtle_logo_text_dark.png" class="welcome-logo dark-only" alt="TURTLE">
+          <h3>How can I help you today?</h3>
+          <p>Send a message, ask a question, or direct TURTLE to operate your browser and desktop applications.</p>
+
+          <div class="prompt-suggestions">
+            <button class="prompt-btn" onclick="fillPrompt('Open Chrome and show me the latest tech headlines')">
+              Open Chrome and show me the latest tech headlines
+            </button>
+            <button class="prompt-btn" onclick="fillPrompt('Analyze my screen and summarize open applications')">
+              Analyze my screen and summarize open applications
+            </button>
+            <button class="prompt-btn" onclick="fillPrompt('Open Chrome and improve my LinkedIn profile')">
+              Open Chrome and improve my LinkedIn profile
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANCHORED COMMAND INPUT -->
+      <div class="command-container">
+        <form class="commandbar" id="commandForm">
+          <input id="commandInput" autocomplete="off" placeholder="Ask TURTLE or type a task to run…">
+          <button class="btn-execute" id="btnExecute" type="submit">
+            <span>Execute</span>
+            <span class="key-hint">↵</span>
+          </button>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- STOP VERIFICATION MODAL -->
+<div class="modal-overlay" id="stopConfirmModal">
+  <div class="modal-box">
+    <div class="modal-title">Stop Active Task?</div>
+    <div class="modal-body">
+      Are you sure you want to stop the ongoing autonomous task? The browser and desktop operations will be halted immediately.
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" id="btnCancelStop">Keep Running</button>
+      <button class="modal-btn stop" id="btnConfirmStop">Stop Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIC & BRIDGE SCRIPTS -->
+<script>
+const chat = document.getElementById('chat');
+const input = document.getElementById('commandInput');
+const btnExecute = document.getElementById('btnExecute');
+const menu = document.getElementById('menuPopover');
+const menuButton = document.getElementById('menuButton');
+const gestureStatus = document.getElementById('gestureStatus');
+const btnComputerUse = document.getElementById('btnComputerUse');
+const btnGesture = document.getElementById('btnGesture');
+const btnVoice = document.getElementById('btnVoice');
+const btnVision = document.getElementById('btnVision');
+const btnSilence = document.getElementById('silence');
+
+// Task Monitor Elements
+const taskMonitor = document.getElementById('taskMonitor');
+const monitorStatusBadge = document.getElementById('monitorStatusBadge');
+const monitorAppPill = document.getElementById('monitorAppPill');
+const monitorTabPill = document.getElementById('monitorTabPill');
+const monitorGoalText = document.getElementById('monitorGoalText');
+const monitorPlanList = document.getElementById('monitorPlanList');
+const monitorActionTicker = document.getElementById('monitorActionTicker');
+const btnTaskPause = document.getElementById('btnTaskPause');
+const btnTaskResume = document.getElementById('btnTaskResume');
+const btnTaskStop = document.getElementById('btnTaskStop');
+const approvalCard = document.getElementById('approvalCard');
+const approvalTitle = document.getElementById('approvalTitle');
+const approvalBody = document.getElementById('approvalBody');
+const btnApproveAction = document.getElementById('btnApproveAction');
+const btnDenyAction = document.getElementById('btnDenyAction');
+
+// Stop Verification Modal Elements
+const stopConfirmModal = document.getElementById('stopConfirmModal');
+const btnCancelStop = document.getElementById('btnCancelStop');
+const btnConfirmStop = document.getElementById('btnConfirmStop');
+
+// Bridge Communication Protocol to Python
+window.sendTurtle = function(action, payload) {
+  try {
+    console.log('TURTLE_BRIDGE:' + JSON.stringify({action: action, payload: payload || {}}));
+  } catch(e) {
+    console.error('Turtle bridge error:', e);
+  }
+};
+
+window.fillPrompt = function(promptText) {
+  input.value = promptText;
+  input.focus();
+};
+
+function formatMarkdown(text) {
+  if (!text) return '';
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  
+  html = html.replace(/```(?:[a-zA-Z]*\n)?([\s\S]*?)```/g, function(match, code) {
+    return '<pre><code>' + code.trim() + '</code></pre>';
+  });
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+function addMessage(text, role = 'agent') {
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+  
+  const wrap = document.createElement('div');
+  wrap.className = 'message ' + role;
+  
+  const meta = document.createElement('div');
+  meta.className = 'message-meta';
+  const now = new Date();
+  meta.textContent = (role === 'user' ? 'You' : 'TURTLE') + ' · ' + now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = formatMarkdown(text);
+  
+  wrap.append(meta, bubble);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function setSwitch(el, on) {
+  if (el) el.classList.toggle('on', !!on);
+}
+
+// Theme Management
+const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+let followSystem = true;
+
+try {
+  const savedFollow = localStorage.getItem('turtle-follow-system');
+  if (savedFollow !== null) {
+    followSystem = (savedFollow === 'true');
+  }
+} catch(e) {}
+
+function getSystemDark() {
+  return systemPrefersDark.matches;
+}
+
+function applyTheme(dark, isManual = false) {
+  document.body.classList.toggle('dark', dark);
+  setSwitch(document.getElementById('themeSwitch'), dark);
+  const sysSwitch = document.getElementById('systemThemeSwitch');
+  if (sysSwitch) setSwitch(sysSwitch, followSystem);
+
+  if (isManual) {
+    try {
+      localStorage.setItem('turtle-theme', dark ? 'dark' : 'light');
+      localStorage.setItem('turtle-follow-system', String(followSystem));
+    } catch(e) {}
+  }
+}
+
+function initTheme() {
+  let isDark = getSystemDark();
+  try {
+    const savedTheme = localStorage.getItem('turtle-theme');
+    if (!followSystem && savedTheme) {
+      isDark = (savedTheme === 'dark');
+    } else {
+      isDark = getSystemDark();
+    }
+  } catch(e) {}
+  applyTheme(isDark, false);
+}
+
+initTheme();
+
+if (systemPrefersDark.addEventListener) {
+  systemPrefersDark.addEventListener('change', e => {
+    if (followSystem) {
+      applyTheme(e.matches, false);
+    }
+  });
+}
+
+window.onSystemThemeChanged = function(isDark) {
+  if (followSystem) {
+    applyTheme(isDark, false);
+  }
+};
+
+if (menuButton && menu) {
+  menuButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = menu.classList.toggle('open');
+    menuButton.setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.menu-wrap')) {
+      menu.classList.remove('open');
+      menuButton.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+document.getElementById('themeOption').addEventListener('click', () => {
+  const dark = !document.body.classList.contains('dark');
+  followSystem = false;
+  applyTheme(dark, true);
+  sendTurtle('preference', {name: 'theme', value: dark ? 'dark' : 'light'});
+});
+
+const systemThemeOption = document.getElementById('systemThemeOption');
+if (systemThemeOption) {
+  systemThemeOption.addEventListener('click', () => {
+    followSystem = !followSystem;
+    if (followSystem) {
+      applyTheme(getSystemDark(), true);
+    } else {
+      try { localStorage.setItem('turtle-follow-system', 'false'); } catch(e) {}
+      setSwitch(document.getElementById('systemThemeSwitch'), false);
+    }
+  });
+}
+
+let autonomy = true, tts = true;
+document.getElementById('autonomyOption').addEventListener('click', () => {
+  autonomy = !autonomy;
+  setSwitch(document.getElementById('autonomySwitch'), autonomy);
+  document.getElementById('mode').textContent = autonomy ? 'AUTONOMOUS' : 'APPROVAL';
+  sendTurtle('preference', {name: 'autonomy', value: autonomy});
+  addMessage('Autonomous mode ' + (autonomy ? 'enabled.' : 'disabled. Actions will require confirmation.'), 'agent');
+});
+
+document.getElementById('ttsOption').addEventListener('click', () => {
+  tts = !tts;
+  setSwitch(document.getElementById('ttsSwitch'), tts);
+  sendTurtle('preference', {name: 'tts', value: tts});
+  addMessage('Voice output ' + (tts ? 'enabled.' : 'disabled.'), 'agent');
+});
+
+document.getElementById('clearChat').addEventListener('click', () => {
+  chat.replaceChildren();
+  const welcome = document.createElement('div');
+  welcome.className = 'chat-welcome';
+  welcome.id = 'welcome';
+  welcome.innerHTML = `
+    <img src="assets/turtle_logo_text_light.png" class="welcome-logo light-only" alt="TURTLE">
+    <img src="assets/turtle_logo_text_dark.png" class="welcome-logo dark-only" alt="TURTLE">
+    <h3>Conversation cleared</h3>
+    <p>Ready for your next task or question.</p>
+  `;
+  chat.appendChild(welcome);
+  sendTurtle('clearChat');
+});
+
+document.getElementById('commandForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const command = input.value.trim();
+  if (!command) return;
+  addMessage(command, 'user');
+  sendTurtle('command', {text: command});
+  input.value = '';
+});
+
+document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => {
+  const action = button.dataset.action;
+  if (action === 'Autonomous Computer Use') {
+    input.value = "Open Chrome, navigate to LinkedIn, and optimize my profile sections with verified updates.";
+    input.focus();
+    return;
+  }
+  sendTurtle('module', {action: action});
+}));
+
+btnSilence.addEventListener('click', () => {
+  sendTurtle('module', {action: 'silence'});
+});
+
+// MCUE Monitor Controls
+btnTaskPause.addEventListener('click', () => sendTurtle('mcue_pause'));
+btnTaskResume.addEventListener('click', () => sendTurtle('mcue_resume'));
+
+btnTaskStop.addEventListener('click', () => {
+  stopConfirmModal.classList.add('active');
+});
+btnCancelStop.addEventListener('click', () => {
+  stopConfirmModal.classList.remove('active');
+});
+btnConfirmStop.addEventListener('click', () => {
+  stopConfirmModal.classList.remove('active');
+  sendTurtle('mcue_cancel');
+});
+
+btnApproveAction.addEventListener('click', () => {
+  approvalCard.classList.remove('active');
+  sendTurtle('mcue_approve');
+});
+btnDenyAction.addEventListener('click', () => {
+  approvalCard.classList.remove('active');
+  sendTurtle('mcue_deny');
+});
+
+// Telemetry & State handlers
+window.updateTelemetry = function(cpu, ram, bat, mode) {
+  if (cpu !== undefined) document.getElementById('cpu').textContent = cpu;
+  if (ram !== undefined) document.getElementById('ram').textContent = ram;
+  if (bat !== undefined) document.getElementById('bat').textContent = bat;
+  if (mode !== undefined) document.getElementById('mode').textContent = mode;
+};
+
+window.setGestureStatus = function(statusText, isActive) {
+  gestureStatus.textContent = statusText;
+  gestureStatus.classList.toggle('active', !!isActive);
+};
+
+window.setGestureButton = function(isActive) {
+  const title = btnGesture.querySelector('.action-title');
+  if (isActive) {
+    if (title) title.textContent = 'Stop Gesture';
+    btnGesture.classList.add('active');
+  } else {
+    if (title) title.textContent = 'Gesture Mouse';
+    btnGesture.classList.remove('active');
+  }
+};
+
+window.setSilenceEnabled = function(enabled) {
+  btnSilence.disabled = !enabled;
+};
+
+window.setBusy = function(busy) {
+  input.disabled = false;
+  btnVoice.disabled = busy;
+  btnVision.disabled = busy;
+  if (busy) {
+    btnExecute.querySelector('span:first-child').textContent = 'Queue';
+    btnExecute.classList.add('queued-mode');
+    input.placeholder = 'Task in progress… Type to queue next task, or type "stop" to halt';
+  } else {
+    btnExecute.querySelector('span:first-child').textContent = 'Execute';
+    btnExecute.classList.remove('queued-mode');
+    input.placeholder = 'Ask TURTLE or type a task to run…';
+  }
+};
+
+window.setAutonomyUI = function(val) {
+  autonomy = !!val;
+  setSwitch(document.getElementById('autonomySwitch'), autonomy);
+  document.getElementById('mode').textContent = autonomy ? 'AUTONOMOUS' : 'APPROVAL';
+};
+
+window.setTtsUI = function(val) {
+  tts = !!val;
+  setSwitch(document.getElementById('ttsSwitch'), tts);
+};
+
+window.updateMCUE = function(data) {
+  if (!data) return;
+  const status = (data.status || 'RUNNING').toUpperCase();
+  
+  if (status === 'IDLE') {
+    taskMonitor.classList.remove('active');
+    return;
+  }
+
+  taskMonitor.classList.add('active');
+  monitorStatusBadge.textContent = status;
+  monitorStatusBadge.className = 'badge-status ' + status.toLowerCase();
+
+  if (status === 'PAUSED') {
+    btnTaskPause.style.display = 'none';
+    btnTaskResume.style.display = 'inline-block';
+  } else {
+    btnTaskPause.style.display = 'inline-block';
+    btnTaskResume.style.display = 'none';
+  }
+
+  if (data.instruction) monitorGoalText.textContent = data.instruction;
+  if (data.current_app) monitorAppPill.textContent = data.current_app;
+
+  if (data.current_url) {
+    monitorTabPill.style.display = 'inline-block';
+    monitorTabPill.textContent = data.current_url.replace('https://', '').split('/')[0];
+  } else {
+    monitorTabPill.style.display = 'none';
+  }
+
+  if (data.plan && Array.isArray(data.plan)) {
+    monitorPlanList.replaceChildren();
+    data.plan.forEach(step => {
+      const row = document.createElement('div');
+      const isDone = step.completed;
+      const isCur = !isDone && step.index === data.current_step;
+      row.className = 'plan-step' + (isDone ? ' completed' : (isCur ? ' active' : ''));
+      const icon = document.createElement('span');
+      icon.className = 'plan-icon';
+      icon.textContent = isDone ? '✓' : (isCur ? '●' : '○');
+      const text = document.createElement('span');
+      text.textContent = step.title;
+      row.append(icon, text);
+      monitorPlanList.appendChild(row);
+    });
+  }
+
+  if (data.last_action) {
+    const act = data.last_action;
+    const vStr = act.verified ? '✓ Verified' : '…';
+    monitorActionTicker.textContent = `Step ${act.step}: ${act.action} (${vStr})`;
+  } else if (data.event_message) {
+    monitorActionTicker.textContent = data.event_message;
+  }
+
+  if (status === 'AWAITING_APPROVAL' && data.approval_prompt) {
+    approvalCard.classList.add('active');
+    approvalTitle.textContent = data.approval_title || 'Authorization Required';
+    approvalBody.textContent = data.approval_prompt;
+  } else if (status !== 'AWAITING_APPROVAL') {
+    approvalCard.classList.remove('active');
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  sendTurtle('init');
+});
+</script>
+</body>
+</html>

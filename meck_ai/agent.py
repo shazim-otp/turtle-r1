@@ -4,30 +4,37 @@ import re
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
-from groq import Groq
 from .tools import TOOL_DEFINITIONS, TOOL_FUNCTIONS, APPROVAL_REQUIRED
 
 _base_dir = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent.parent
 load_dotenv(_base_dir / ".env")
 load_dotenv()
 
-TURTLE_SYSTEM_PROMPT = """You are TURTLE, an advanced, highly capable autonomous desktop artificial intelligence.
-
-Key Operational Directives:
-1. Full Autonomy & Freedom: You execute commands and objectives directly without asking for permission, confirmations, or second-guessing the user. When asked to do something, you make the appropriate tool calls immediately and get it done.
-2. Tone & Demeanor: Calm, sharp, articulate, efficient, and polite. Address the user respectfully.
-3. Decisive Execution: You have full access to Windows tools:
-   - Webcam hand gesture mouse tracking (`activate_gesture_control`, `deactivate_gesture_control`)
-   - PowerShell & command execution (`run_command`, `run_powershell`)
-   - Launching apps (`open_app`), terminating apps (`close_app`)
-   - Keyboard & mouse control (`press_hotkey`, `type_text`, `click_mouse`)
-   - Audio & media control (`control_volume`)
-   - File operations (`read_file`, `write_file`, `search_files`, `create_folder`)
-   - Web navigation (`open_url`, `browser_search`)
-   - Screen vision inspection (`analyze_screen`)
-4. Multi-step Operations: For multi-step tasks, chain tools sequentially and autonomously until the mission is accomplished.
-5. Accuracy & Truth: Always base responses on actual tool outputs. Once an action is executed, concisely summarize the outcome.
+TURTLE_SYSTEM_PROMPT = """You are TURTLE, an autonomous Windows AI assistant.
+Directives:
+1. Autonomy: Execute tools directly without asking for permission.
+2. Concise: Keep all responses brief, direct, and factual.
+3. Multi-step: Chain tools sequentially until the objective is accomplished.
 """
+
+def sanitize_history(history, max_turns=3):
+    """Safely prune conversation history.
+    Keeps system prompt + the last N complete user/assistant exchanges.
+    Filters out intermediate raw tool execution blobs from previous turns to prevent 400 errors and minimize tokens.
+    """
+    system_msg = history[0] if history and history[0].get("role") == "system" else {"role": "system", "content": TURTLE_SYSTEM_PROMPT}
+
+    clean_messages = []
+    for msg in history[1:]:
+        role = msg.get("role")
+        # Keep clean text messages only (exclude intermediate tool calls / results from finished turns)
+        if role in ("user", "assistant") and msg.get("content") and not msg.get("tool_calls"):
+            clean_messages.append({"role": role, "content": msg["content"]})
+
+    # Keep only the last max_turns exchanges (2 messages per exchange)
+    clean_messages = clean_messages[-(max_turns * 2):]
+    return [system_msg] + clean_messages
+
 
 def parse_xml_tool_calls(text):
     """Fallback parser for models that output tool calls in XML syntax."""
@@ -46,59 +53,96 @@ def parse_xml_tool_calls(text):
         calls.append((fn_name, params))
     return calls
 
+
 class MeckAgent:
     def __init__(self):
-        key = os.getenv("GROQ_API_KEY")
-        if not key:
-            raise RuntimeError("GROQ_API_KEY is missing. Add it to your .env file.")
-        self.client = Groq(api_key=key)
-        self.model = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
+        from .ai_client import get_ai_client
+        self.client, self.model, self.vision_model, self.provider = get_ai_client()
         self.history = [{"role": "system", "content": TURTLE_SYSTEM_PROMPT}]
 
     def respond(self, user_text, approval_callback=None, status_callback=lambda x: None, autonomous=True):
+        # 1. Sanitize history to keep clean user/assistant dialogue and prevent broken tool pairings
+        self.history = sanitize_history(self.history, max_turns=3)
         self.history.append({"role": "user", "content": user_text})
-        if len(self.history) > 20:
-            self.history = [self.history[0]] + self.history[-19:]
+
+        models_to_try = [self.model]
+        if self.provider == "gemini":
+            for fb in ["gemini-flash-lite-latest", "gemini-3.5-flash", "gemini-3.1-flash-lite"]:
+                if fb not in models_to_try:
+                    models_to_try.append(fb)
 
         max_rounds = 10
         for _ in range(max_rounds):
-            try:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=self.history,
-                    tools=TOOL_DEFINITIONS,
-                    tool_choice="auto",
-                    temperature=0.2,
-                )
-                message = response.choices[0].message
-            except Exception as exc:
-                status_callback("Adjusting query protocol…")
+            message = None
+            last_exc = None
+
+            for candidate_model in models_to_try:
+                try:
+                    response = self.client.chat.completions.create(
+                        model=candidate_model,
+                        messages=self.history,
+                        tools=TOOL_DEFINITIONS,
+                        tool_choice="auto",
+                        temperature=0.2,
+                        max_tokens=250,
+                    )
+                    message = response.choices[0].message
+                    self.model = candidate_model
+                    break
+                except Exception as exc:
+                    last_exc = exc
+                    # Automatic self-healing: if 400 Bad Request happens, purge context to [system, current_user] and retry immediately
+                    if "400" in str(exc) and len(self.history) > 2:
+                        status_callback("Restoring conversation buffer…")
+                        self.history = [self.history[0], self.history[-1]]
+                        try:
+                            retry_resp = self.client.chat.completions.create(
+                                model=candidate_model,
+                                messages=self.history,
+                                tools=TOOL_DEFINITIONS,
+                                tool_choice="auto",
+                                temperature=0.2,
+                                max_tokens=250,
+                            )
+                            message = retry_resp.choices[0].message
+                            self.model = candidate_model
+                            break
+                        except Exception as retry_exc:
+                            last_exc = retry_exc
+                    status_callback("Rerouting connection…")
+                    continue
+
+            if not message:
                 try:
                     fallback_resp = self.client.chat.completions.create(
                         model=self.model,
-                        messages=self.history,
+                        messages=[self.history[0], {"role": "user", "content": user_text}],
                         temperature=0.3,
+                        max_tokens=250,
                     )
                     message = fallback_resp.choices[0].message
                 except Exception as inner_exc:
-                    return f"API Communication Error, Sir: {inner_exc}"
+                    return f"API Communication Error, Sir: {last_exc or inner_exc}"
 
             tool_calls = message.tool_calls
 
             # Handle standard structured tool calls
             if tool_calls:
-                self.history.append({
-                    "role": "assistant",
-                    "content": message.content,
-                    "tool_calls": [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {"name": tc.function.name, "arguments": tc.function.arguments}
-                        }
-                        for tc in tool_calls
-                    ]
-                })
+                if hasattr(message, "model_dump"):
+                    self.history.append(message.model_dump(exclude_unset=True))
+                else:
+                    self.history.append({
+                        "role": "assistant",
+                        "content": message.content,
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {"name": tc.function.name, "arguments": tc.function.arguments}
+                            }
+                            for tc in tool_calls
+                        ]
+                    })
 
                 for call in tool_calls:
                     name = call.function.name
@@ -124,7 +168,7 @@ class MeckAgent:
                     self.history.append({
                         "role": "tool",
                         "tool_call_id": call.id,
-                        "content": str(result)[:8000]
+                        "content": str(result)[:1500]
                     })
                 continue
 
@@ -138,8 +182,7 @@ class MeckAgent:
                         res = TOOL_FUNCTIONS[name](**args)
                         results_text.append(f"Result of {name}: {res}")
                 
-                # Report back to the model with tool execution result
-                summary_prompt = "You executed the following action(s):\n" + "\n".join(results_text) + "\nProvide a concise, polite confirmation in your TURTLE persona."
+                summary_prompt = "You executed the following action(s):\n" + "\n".join(results_text) + "\nProvide a concise confirmation."
                 self.history.append({"role": "assistant", "content": message.content})
                 self.history.append({"role": "user", "content": summary_prompt})
                 continue

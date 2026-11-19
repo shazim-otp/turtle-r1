@@ -12,3 +12,4 @@ edge-tts>=6.1
 pygame>=2.5
 opencv-python>=4.8
 mediapipe>=0.10
+playwright>=1.40

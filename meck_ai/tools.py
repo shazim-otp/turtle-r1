@@ -341,6 +341,15 @@ def stop_voice() -> str:
     stop_speech()
     return "Voice playback stopped."
 
+def execute_computer_task(task_instruction: str) -> str:
+    """Execute a complex, multi-step autonomous desktop or browser operation using the Computer Use Engine (MCUE)."""
+    from .computer_use import get_computer_engine
+    engine = get_computer_engine()
+    res = engine.execute_task(task_instruction)
+    if res.get("success"):
+        return f"Autonomous Task Succeeded: {res.get('summary', 'Completed.')}"
+    return f"Autonomous Task Notice: {res.get('error', res.get('message', 'Completed with notes.'))}"
+
 TOOL_FUNCTIONS = {
     "run_command": run_command,
     "run_powershell": run_powershell,
@@ -363,32 +372,19 @@ TOOL_FUNCTIONS = {
     "activate_gesture_control": activate_gesture_control,
     "deactivate_gesture_control": deactivate_gesture_control,
     "stop_voice": stop_voice,
+    "execute_computer_task": execute_computer_task,
 }
 
 TOOL_DEFINITIONS = [
     {
         "type": "function",
         "function": {
-            "name": "run_command",
-            "description": "Execute any command, PowerShell script, or system utility in Windows. Provides complete freedom to manage processes, inspect the OS, run scripts, or configure settings.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "command": {"type": "string", "description": "The command or PowerShell script to execute."}
-                },
-                "required": ["command"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
             "name": "run_powershell",
-            "description": "Execute any command or script in PowerShell on Windows. Full freedom to inspect, configure, control apps, run scripts, query services, or install packages.",
+            "description": "Execute PowerShell command or script on Windows.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "command": {"type": "string", "description": "The PowerShell command or script block to execute."}
+                    "command": {"type": "string", "description": "PowerShell command to run."}
                 },
                 "required": ["command"],
             },
@@ -398,11 +394,11 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "open_app",
-            "description": "Launch any application, program, game, or tool on the computer (e.g. Chrome, Spotify, Notepad, Discord, VS Code, Steam).",
+            "description": "Launch program by name (e.g. 'chrome', 'notepad', 'calc').",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "app_name": {"type": "string", "description": "The name or path of the application to launch."}
+                    "app_name": {"type": "string", "description": "Application name or path."}
                 },
                 "required": ["app_name"],
             },
@@ -412,11 +408,11 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "close_app",
-            "description": "Close or terminate an active application or process by name (e.g. notepad.exe, chrome.exe).",
+            "description": "Close process by name (e.g. 'notepad.exe').",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "process_name": {"type": "string", "description": "Name of the process or app to close."}
+                    "process_name": {"type": "string", "description": "Process name to terminate."}
                 },
                 "required": ["process_name"],
             },
@@ -426,11 +422,11 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "open_windows_settings",
-            "description": "Open Windows 10/11 Settings. Pass optional subpage (e.g. 'network-wifi', 'bluetooth', 'appsfeatures', 'windowsupdate').",
+            "description": "Open Windows Settings, optional page (e.g. 'bluetooth', 'network').",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "page": {"type": "string", "description": "Settings URI subpage, e.g. 'bluetooth', 'network', 'display', or empty for main settings."}
+                    "page": {"type": "string", "description": "Optional Settings URI subpage."}
                 },
             },
         },
@@ -439,13 +435,13 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "search_files",
-            "description": "Search recursively for files matching a name substring in any directory.",
+            "description": "Find files recursively by name substring.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "root": {"type": "string", "description": "Root folder path to search from, e.g. 'C:\\' or 'C:\\Users\\shaza\\Documents'."},
-                    "filename_contains": {"type": "string", "description": "Keyword or substring to find in filename."},
-                    "max_results": {"type": "integer", "description": "Maximum results to return (default 25)."}
+                    "root": {"type": "string", "description": "Root folder path to search."},
+                    "filename_contains": {"type": "string", "description": "Filename keyword."},
+                    "max_results": {"type": "integer", "description": "Max results (default 25)."}
                 },
                 "required": ["root", "filename_contains"],
             },
@@ -455,11 +451,11 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "read_file",
-            "description": "Read text content of a file on the local computer.",
+            "description": "Read text file from disk.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string", "description": "Absolute or relative file path to read."}
+                    "path": {"type": "string", "description": "File path to read."}
                 },
                 "required": ["path"],
             },
@@ -469,13 +465,13 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "write_file",
-            "description": "Write or append content directly to a file on disk.",
+            "description": "Write text to file ('w' or 'a').",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string", "description": "File path to write to."},
-                    "content": {"type": "string", "description": "Text content to write."},
-                    "mode": {"type": "string", "description": "'w' for overwrite (default) or 'a' for append."}
+                    "path": {"type": "string", "description": "File path."},
+                    "content": {"type": "string", "description": "Text content."},
+                    "mode": {"type": "string", "description": "'w' or 'a'."}
                 },
                 "required": ["path", "content"],
             },
@@ -485,7 +481,7 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "create_folder",
-            "description": "Create a new folder or directory path.",
+            "description": "Create folder directory.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -499,7 +495,7 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "system_status",
-            "description": "Check current system vitals: CPU usage, RAM utilization, Disk space, Battery level, and active processes.",
+            "description": "Get CPU, RAM, Disk, Battery status.",
             "parameters": {"type": "object", "properties": {}},
         },
     },
@@ -507,7 +503,7 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "take_screenshot",
-            "description": "Capture the full desktop screen and save it to the Pictures/TURTLE folder.",
+            "description": "Save full screen image to Pictures/TURTLE.",
             "parameters": {"type": "object", "properties": {}},
         },
     },
@@ -515,11 +511,11 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "analyze_screen",
-            "description": "Capture the current desktop screen and inspect it with vision AI to see what is on screen.",
+            "description": "Capture screen and analyze with vision AI.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "prompt": {"type": "string", "description": "Specific question or objective for screen inspection."}
+                    "prompt": {"type": "string", "description": "Question or focus area."}
                 },
             },
         },
@@ -528,11 +524,11 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "browser_search",
-            "description": "Open a Google search query in the user's default browser.",
+            "description": "Google search in browser.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "The search terms."}
+                    "query": {"type": "string", "description": "Search query."}
                 },
                 "required": ["query"],
             },
@@ -542,11 +538,11 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "open_url",
-            "description": "Open any URL/website directly in the user's web browser.",
+            "description": "Open URL in browser.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "url": {"type": "string", "description": "The web address (e.g. 'https://youtube.com')."}
+                    "url": {"type": "string", "description": "URL to open."}
                 },
                 "required": ["url"],
             },
@@ -556,11 +552,11 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "type_text",
-            "description": "Type text into the currently focused window or text input field.",
+            "description": "Type text into focused element.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "text": {"type": "string", "description": "The exact string to type."}
+                    "text": {"type": "string", "description": "Text to type."}
                 },
                 "required": ["text"],
             },
@@ -570,15 +566,11 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "press_hotkey",
-            "description": "Simulate keyboard shortcut or keys, e.g. ['ctrl', 'c'], ['alt', 'f4'], ['win', 'd'], ['enter'].",
+            "description": "Press keyboard shortcut keys e.g. ['ctrl', 'c'].",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "keys": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "List of key names to press together."
-                    }
+                    "keys": {"type": "array", "items": {"type": "string"}, "description": "Key names."}
                 },
                 "required": ["keys"],
             },
@@ -588,14 +580,14 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "click_mouse",
-            "description": "Click the mouse at specific (x, y) coordinates or the current position.",
+            "description": "Click mouse at coordinates or current spot.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "x": {"type": "integer", "description": "X coordinate (optional)."},
-                    "y": {"type": "integer", "description": "Y coordinate (optional)."},
-                    "button": {"type": "string", "description": "'left', 'right', or 'middle'."},
-                    "clicks": {"type": "integer", "description": "Number of clicks, e.g. 1 or 2."}
+                    "x": {"type": "integer"},
+                    "y": {"type": "integer"},
+                    "button": {"type": "string"},
+                    "clicks": {"type": "integer"}
                 },
             },
         },
@@ -604,11 +596,11 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "control_volume",
-            "description": "Adjust or toggle audio: 'volume_up', 'volume_down', 'mute', 'play_pause', 'next', 'prev'.",
+            "description": "Adjust audio: 'volume_up', 'volume_down', 'mute', 'play_pause'.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "action": {"type": "string", "description": "'volume_up', 'volume_down', 'mute', 'play_pause', 'next', 'prev'"}
+                    "action": {"type": "string", "description": "'volume_up', 'volume_down', 'mute', 'play_pause'"}
                 },
                 "required": ["action"],
             },
@@ -618,7 +610,7 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "activate_gesture_control",
-            "description": "Activate webcam hand gesture mouse control. Hand acts as cursor, index+thumb pinch to left click/drag, pinky+thumb to right click, and all-finger hold (fist) to scroll.",
+            "description": "Start webcam hand gesture mouse tracking.",
             "parameters": {"type": "object", "properties": {}},
         },
     },
@@ -626,7 +618,7 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "deactivate_gesture_control",
-            "description": "Stop and deactivate hand gesture mouse control and close the tracking HUD window.",
+            "description": "Stop hand gesture mouse tracking.",
             "parameters": {"type": "object", "properties": {}},
         },
     },
@@ -634,8 +626,22 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "stop_voice",
-            "description": "Immediately stop audio playback and text-to-speech output.",
+            "description": "Stop text-to-speech audio.",
             "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "execute_computer_task",
+            "description": "Autonomous multi-step computer task across desktop/browser.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_instruction": {"type": "string", "description": "Task instruction."}
+                },
+                "required": ["task_instruction"],
+            },
         },
     },
 ]
